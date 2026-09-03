@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reminders - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 420px;">
+        <h1>🔔 Reminders</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <select id="reminderType">
+            <option value="PRAYER">Prayer</option>
+            <option value="QURAN">Quran</option>
+            <option value="TAHAJJUD">Tahajjud</option>
+            <option value="DHIKR">Dhikr</option>
+            <option value="CUSTOM">Custom</option>
+        </select>
+        <input type="time" id="reminderTime">
+        <input type="text" id="customLabel" placeholder="Label (optional)">
+        <br><br>
+        <button onclick="addReminder()">Add Reminder</button>
+        <p id="message"></p>
+
+        <h3>Your Reminders</h3>
+        <div id="reminderList" style="text-align: left;">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadReminders();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function addReminder() {
+            const message = document.getElementById("message");
+            const reminderType = document.getElementById("reminderType").value;
+            const reminderTime = document.getElementById("reminderTime").value;
+            const customLabel = document.getElementById("customLabel").value;
+
+            if (!reminderTime) {
+                message.textContent = "Please pick a time.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/reminders`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        reminderType: reminderType,
+                        reminderTime: reminderTime + ":00",
+                        enabled: true,
+                        customLabel: customLabel
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to add reminder.");
+                message.textContent = "Reminder added!";
+                message.className = "success";
+                document.getElementById("customLabel").value = "";
+                loadReminders();
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function toggleReminder(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reminders/${id}/toggle`, {
+                    method: "PUT",
+                    headers: authHeaders()
+                });
+                if (!response.ok) throw new Error("Failed to toggle.");
+                loadReminders();
+            } catch (error) {
+                alert("Could not toggle reminder.");
+            }
+        }
+
+        async function deleteReminder(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reminders/${id}`, {
+                    method: "DELETE",
+                    headers: authHeaders()
+                });
+                if (!response.ok) throw new Error("Failed to delete.");
+                loadReminders();
+            } catch (error) {
+                alert("Could not delete reminder.");
+            }
+        }
+
+        async function loadReminders() {
+            const listDiv = document.getElementById("reminderList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/reminders/user/${userId}`, { headers: authHeaders() });
+                const reminders = await response.json();
+
+                if (reminders.length === 0) {
+                    listDiv.innerHTML = "<p>No reminders set yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = reminders.map(r => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0;">
+                        <span>🔔 ${r.reminderType} ${r.customLabel ? "(" + r.customLabel + ")" : ""} - ${r.reminderTime}</span>
+                        <span>
+                            <button onclick="toggleReminder(${r.id})" style="font-size: 11px; padding: 3px 8px;">${r.enabled ? "On" : "Off"}</button>
+                            <button onclick="deleteReminder(${r.id})" style="font-size: 11px; padding: 3px 8px;">✕</button>
+                        </span>
+                    </div>
+                `).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load reminders.";
+            }
+        }
+    </script>
+
+</body>
+</html>

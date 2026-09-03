@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Friends - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 450px;">
+        <h1>🤝 Friends</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <input type="email" id="friendEmail" placeholder="Friend's email">
+        <br><br>
+        <button onclick="sendRequest()">Send Friend Request</button>
+        <p id="message"></p>
+
+        <h3>Pending Requests (Received)</h3>
+        <div id="pendingList" style="text-align: left;">Loading...</div>
+
+        <h3>Send Encouragement</h3>
+        <input type="email" id="encourageEmail" placeholder="Friend's email">
+        <br>
+        <textarea id="encourageMessage" placeholder="Write a kind message..." rows="2"></textarea>
+        <br><br>
+        <button onclick="sendEncouragement()">Send</button>
+        <p id="encourageStatus"></p>
+
+        <h3>Messages Received</h3>
+        <div id="encouragementList" style="text-align: left;">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else {
+            loadPending();
+            loadEncouragements();
+        }
+
+        async function getUserId(emailToLookup) {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${emailToLookup}`, { headers: authHeaders() });
+            if (!response.ok) throw new Error("User not found: " + emailToLookup);
+            return (await response.json()).id;
+        }
+
+        async function sendRequest() {
+            const message = document.getElementById("message");
+            const friendEmail = document.getElementById("friendEmail").value;
+
+            if (!friendEmail) {
+                message.textContent = "Enter a friend's email.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const myId = await getUserId(email);
+                const friendId = await getUserId(friendEmail);
+
+                const response = await fetch(`${API_BASE_URL}/friend-requests`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        sender: { id: myId },
+                        receiver: { id: friendId }
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to send request.");
+                message.textContent = "Friend request sent!";
+                message.className = "success";
+                document.getElementById("friendEmail").value = "";
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadPending() {
+            const listDiv = document.getElementById("pendingList");
+            try {
+                const myId = await getUserId(email);
+                const response = await fetch(`${API_BASE_URL}/friend-requests/pending/${myId}`, { headers: authHeaders() });
+                const requests = await response.json();
+
+                if (requests.length === 0) {
+                    listDiv.innerHTML = "<p>No pending requests.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = requests.map(r => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0;">
+                        <span>${r.sender.fullName} (${r.sender.email})</span>
+                        <span>
+                            <button onclick="acceptRequest(${r.id})" style="font-size: 11px; padding: 3px 8px;">Accept</button>
+                            <button onclick="declineRequest(${r.id})" style="font-size: 11px; padding: 3px 8px;">Decline</button>
+                        </span>
+                    </div>
+                `).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load requests.";
+            }
+        }
+
+        async function acceptRequest(id) {
+            await fetch(`${API_BASE_URL}/friend-requests/${id}/accept`, { method: "PUT", headers: authHeaders() });
+            loadPending();
+        }
+
+        async function declineRequest(id) {
+            await fetch(`${API_BASE_URL}/friend-requests/${id}/decline`, { method: "PUT", headers: authHeaders() });
+            loadPending();
+        }
+
+        async function sendEncouragement() {
+            const status = document.getElementById("encourageStatus");
+            const friendEmail = document.getElementById("encourageEmail").value;
+            const msg = document.getElementById("encourageMessage").value;
+
+            if (!friendEmail || !msg) {
+                status.textContent = "Fill in both fields.";
+                status.className = "error";
+                return;
+            }
+
+            try {
+                const myId = await getUserId(email);
+                const friendId = await getUserId(friendEmail);
+
+                const response = await fetch(`${API_BASE_URL}/encouragements`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        sender: { id: myId },
+                        receiver: { id: friendId },
+                        message: msg
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to send.");
+                status.textContent = "Sent!";
+                status.className = "success";
+                document.getElementById("encourageMessage").value = "";
+            } catch (error) {
+                status.textContent = error.message;
+                status.className = "error";
+            }
+        }
+
+        async function loadEncouragements() {
+            const listDiv = document.getElementById("encouragementList");
+            try {
+                const myId = await getUserId(email);
+                const response = await fetch(`${API_BASE_URL}/encouragements/received/${myId}`, { headers: authHeaders() });
+                const messages = await response.json();
+
+                if (messages.length === 0) {
+                    listDiv.innerHTML = "<p>No messages yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = messages.slice().reverse().map(m => `
+                    <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                        <p>${m.message}</p>
+                        <small style="color: gray;">from ${m.sender.fullName}</small>
+                    </div>
+                `).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load messages.";
+            }
+        }
+    </script>
+
+</body>
+</html>

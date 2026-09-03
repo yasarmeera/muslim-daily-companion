@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Library - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 450px;">
+        <h1>📚 Library</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <button onclick="showTab('hadith')">Hadith</button>
+        <button onclick="showTab('dua')">Dua</button>
+
+        <div id="hadithTab" style="text-align: left; margin-top: 20px;">
+            <h3>Hadith Collection</h3>
+            <div id="hadithList">Loading...</div>
+        </div>
+
+        <div id="duaTab" style="text-align: left; margin-top: 20px; display: none;">
+            <h3>Dua Collection</h3>
+            <div id="duaList">Loading...</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+
+        loadHadiths();
+        loadDuas();
+
+        function showTab(tab) {
+            document.getElementById("hadithTab").style.display = tab === "hadith" ? "block" : "none";
+            document.getElementById("duaTab").style.display = tab === "dua" ? "block" : "none";
+        }
+
+        async function loadHadiths() {
+            const listDiv = document.getElementById("hadithList");
+            try {
+                const response = await fetch(`${API_BASE_URL}/hadiths`, { headers: authHeaders() });
+                const items = await response.json();
+
+                if (items.length === 0) {
+                    listDiv.innerHTML = "<p>No hadiths added yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = items.map(h => `
+                    <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                        <p>${h.text}</p>
+                        <small style="color: gray;">— ${h.narrator || "Unknown"}, ${h.source || ""}</small>
+                        ${h.category ? `<br><small style="color: #0f8a5f;">${h.category}</small>` : ""}
+                    </div>
+                `).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load hadiths.";
+            }
+        }
+
+        async function loadDuas() {
+            const listDiv = document.getElementById("duaList");
+            try {
+                const response = await fetch(`${API_BASE_URL}/duas`, { headers: authHeaders() });
+                const items = await response.json();
+
+                if (items.length === 0) {
+                    listDiv.innerHTML = "<p>No duas added yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = items.map(d => `
+                    <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                        <p><strong>${d.arabicText}</strong></p>
+                        <p>${d.translation || ""}</p>
+                        <small style="color: gray;">${d.occasion || ""}</small>
+                    </div>
+                `).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load duas.";
+            }
+        }
+    </script>
+
+</body>
+</html>

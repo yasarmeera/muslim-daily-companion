@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Goals - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 420px;">
+        <h1>🎯 Goals</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <select id="goalType">
+            <option value="Quran Pages/Day">Quran Pages/Day</option>
+            <option value="Dhikr Count/Day">Dhikr Count/Day</option>
+            <option value="Tahajjud/Week">Tahajjud/Week</option>
+            <option value="Sunnah Habits/Day">Sunnah Habits/Day</option>
+        </select>
+        <input type="number" id="targetValue" placeholder="Target number" min="1">
+        <br><br>
+        <button onclick="addGoal()">Set Goal</button>
+        <p id="message"></p>
+
+        <h3>Your Goals</h3>
+        <div id="goalsList" style="text-align: left;">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadGoals();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function addGoal() {
+            const message = document.getElementById("message");
+            const goalType = document.getElementById("goalType").value;
+            const targetValue = document.getElementById("targetValue").value;
+
+            if (!targetValue) {
+                message.textContent = "Please enter a target number.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/goals`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        goalType: goalType,
+                        targetValue: parseInt(targetValue)
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to set goal.");
+                message.textContent = "Goal set!";
+                message.className = "success";
+                document.getElementById("targetValue").value = "";
+                loadGoals();
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadGoals() {
+            const listDiv = document.getElementById("goalsList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/goals/user/${userId}`, { headers: authHeaders() });
+                const goals = await response.json();
+
+                if (goals.length === 0) {
+                    listDiv.innerHTML = "<p>No goals set yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = goals.map(g =>
+                    `<p>🎯 ${g.goalType}: <strong>${g.targetValue}</strong></p>`
+                ).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load goals.";
+            }
+        }
+    </script>
+
+</body>
+</html>

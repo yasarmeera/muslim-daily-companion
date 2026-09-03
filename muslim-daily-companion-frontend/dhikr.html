@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dhikr - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 400px;">
+        <h1>🤲 Dhikr Tracker</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <input type="number" id="dhikrCount" placeholder="Count" min="1">
+        <input type="text" id="dhikrType" placeholder="Type (e.g. SubhanAllah)">
+        <br><br>
+        <button onclick="logDhikr()">Log Dhikr</button>
+        <p id="message"></p>
+
+        <h3>Today's Dhikr</h3>
+        <div id="dhikrList">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadDhikr();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function logDhikr() {
+            const message = document.getElementById("message");
+            const count = document.getElementById("dhikrCount").value;
+            const dhikrType = document.getElementById("dhikrType").value;
+            const today = new Date().toISOString().split("T")[0];
+
+            if (!count) {
+                message.textContent = "Please enter a count.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/dhikr`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        dhikrDate: today,
+                        count: parseInt(count),
+                        dhikrType: dhikrType
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to log dhikr.");
+                message.textContent = "Dhikr logged!";
+                message.className = "success";
+                document.getElementById("dhikrCount").value = "";
+                document.getElementById("dhikrType").value = "";
+                loadDhikr();
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadDhikr() {
+            const listDiv = document.getElementById("dhikrList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/dhikr/user/${userId}`, { headers: authHeaders() });
+                const items = await response.json();
+                const today = new Date().toISOString().split("T")[0];
+                const todays = items.filter(d => d.dhikrDate === today);
+
+                if (todays.length === 0) {
+                    listDiv.innerHTML = "<p>No dhikr logged today yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = todays.map(d =>
+                    `<p>🤲 ${d.count}${d.dhikrType ? " - " + d.dhikrType : ""}</p>`
+                ).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load dhikr.";
+            }
+        }
+    </script>
+
+</body>
+</html>

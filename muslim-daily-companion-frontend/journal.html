@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Journal - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 420px;">
+        <h1>📝 Journal</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <select id="entryType">
+            <option value="GRATITUDE">Gratitude</option>
+            <option value="REFLECTION">Reflection</option>
+            <option value="NOTE">Note</option>
+        </select>
+        <br><br>
+        <textarea id="content" placeholder="Write your thoughts..." rows="4"></textarea>
+        <br><br>
+        <button onclick="addEntry()">Save Entry</button>
+        <p id="message"></p>
+
+        <h3>Your Entries</h3>
+        <div id="entryList" style="text-align: left;">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadEntries();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function addEntry() {
+            const message = document.getElementById("message");
+            const entryType = document.getElementById("entryType").value;
+            const content = document.getElementById("content").value;
+
+            if (!content) {
+                message.textContent = "Please write something first.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/journal`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        entryType: entryType,
+                        content: content
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to save entry.");
+                message.textContent = "Entry saved!";
+                message.className = "success";
+                document.getElementById("content").value = "";
+                loadEntries();
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadEntries() {
+            const listDiv = document.getElementById("entryList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/journal/user/${userId}`, { headers: authHeaders() });
+                const entries = await response.json();
+
+                if (entries.length === 0) {
+                    listDiv.innerHTML

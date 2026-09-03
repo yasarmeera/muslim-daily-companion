@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quran - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 400px;">
+        <h1>📖 Quran Tracker</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <input type="number" id="pagesRead" placeholder="Pages read" min="1">
+        <input type="text" id="surahName" placeholder="Surah name (optional)">
+        <br><br>
+        <button onclick="logReading()">Log Reading</button>
+        <p id="message"></p>
+
+        <h3>Today's Readings</h3>
+        <div id="readingList">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) {
+            window.location.href = "login.html";
+        } else {
+            loadReadings();
+        }
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            const user = await response.json();
+            return user.id;
+        }
+
+        async function logReading() {
+            const message = document.getElementById("message");
+            const pagesRead = document.getElementById("pagesRead").value;
+            const surahName = document.getElementById("surahName").value;
+            const today = new Date().toISOString().split("T")[0];
+
+            if (!pagesRead) {
+                message.textContent = "Please enter pages read.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+
+                const response = await fetch(`${API_BASE_URL}/quran`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        readingDate: today,
+                        pagesRead: parseInt(pagesRead),
+                        surahName: surahName
+                    })
+                });
+
+                if (!response.ok) throw new Error("Failed to log reading.");
+
+                message.textContent = "Reading logged!";
+                message.className = "success";
+                document.getElementById("pagesRead").value = "";
+                document.getElementById("surahName").value = "";
+                loadReadings();
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadReadings() {
+            const listDiv = document.getElementById("readingList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/quran/user/${userId}`, { headers: authHeaders() });
+                const readings = await response.json();
+
+                const today = new Date().toISOString().split("T")[0];
+                const todaysReadings = readings.filter(r => r.readingDate === today);
+
+                if (todaysReadings.length === 0) {
+                    listDiv.innerHTML = "<p>No readings logged today yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = todaysReadings.map(r =>
+                    `<p>📖 ${r.pagesRead} pages${r.surahName ? " - " + r.surahName : ""}</p>`
+                ).join("");
+
+            } catch (error) {
+                listDiv.textContent = "Could not load readings.";
+            }
+        }
+    </script>
+
+</body>
+</html>

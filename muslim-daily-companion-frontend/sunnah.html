@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sunnah - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 400px;">
+        <h1>☀️ Sunnah Habits</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <input type="text" id="habitName" placeholder="Habit name (e.g. Miswak)">
+        <br><br>
+        <button onclick="logSunnah()">Mark as Completed</button>
+        <p id="message"></p>
+
+        <h3>Today's Sunnah Habits</h3>
+        <div id="sunnahList">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadSunnah();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function logSunnah() {
+            const message = document.getElementById("message");
+            const habitName = document.getElementById("habitName").value;
+            const today = new Date().toISOString().split("T")[0];
+
+            if (!habitName) {
+                message.textContent = "Please enter a habit name.";
+                message.className = "error";
+                return;
+            }
+
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/sunnah`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        sunnahDate: today,
+                        habitName: habitName,
+                        completed: true
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to log habit.");
+                message.textContent = "Habit logged!";
+                message.className = "success";
+                document.getElementById("habitName").value = "";
+                loadSunnah();
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadSunnah() {
+            const listDiv = document.getElementById("sunnahList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/sunnah/user/${userId}`, { headers: authHeaders() });
+                const items = await response.json();
+                const today = new Date().toISOString().split("T")[0];
+                const todays = items.filter(s => s.sunnahDate === today);
+
+                if (todays.length === 0) {
+                    listDiv.innerHTML = "<p>No habits logged today yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = todays.map(s =>
+                    `<p>☀️ ${s.habitName}</p>`
+                ).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load habits.";
+            }
+        }
+    </script>
+
+</body>
+</html>

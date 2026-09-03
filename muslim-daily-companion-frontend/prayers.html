@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prayers - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 400px;">
+        <h1>🕌 Prayer Tracker</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <select id="prayerName">
+            <option value="Fajr">Fajr</option>
+            <option value="Dhuhr">Dhuhr</option>
+            <option value="Asr">Asr</option>
+            <option value="Maghrib">Maghrib</option>
+            <option value="Isha">Isha</option>
+        </select>
+        <br><br>
+        <button onclick="logPrayer()">Mark as Prayed</button>
+        <p id="message"></p>
+
+        <h3>Today's Prayers</h3>
+        <div id="prayerList">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) {
+            window.location.href = "login.html";
+        } else {
+            loadPrayers();
+        }
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            const user = await response.json();
+            return user.id;
+        }
+
+        async function logPrayer() {
+            const message = document.getElementById("message");
+            const prayerName = document.getElementById("prayerName").value;
+            const today = new Date().toISOString().split("T")[0];
+
+            try {
+                const userId = await getUserId();
+
+                const response = await fetch(`${API_BASE_URL}/prayers`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        prayerDate: today,
+                        prayerName: prayerName,
+                        completed: true
+                    })
+                });
+
+                if (!response.ok) throw new Error("Failed to log prayer.");
+
+                message.textContent = prayerName + " logged!";
+                message.className = "success";
+                loadPrayers();
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadPrayers() {
+            const listDiv = document.getElementById("prayerList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/prayers/user/${userId}`, { headers: authHeaders() });
+                const prayers = await response.json();
+
+                const today = new Date().toISOString().split("T")[0];
+                const todaysPrayers = prayers.filter(p => p.prayerDate === today);
+
+                if (todaysPrayers.length === 0) {
+                    listDiv.innerHTML = "<p>No prayers logged today yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = todaysPrayers.map(p =>
+                    `<p>✅ ${p.prayerName}</p>`
+                ).join("");
+
+            } catch (error) {
+                listDiv.textContent = "Could not load prayers.";
+            }
+        }
+    </script>
+
+</body>
+</html>

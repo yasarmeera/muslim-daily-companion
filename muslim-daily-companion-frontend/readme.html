@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Read Me - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 450px;">
+        <h1>💛 Read Me</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <select id="moodSelect">
+            <option value="Sad">🟡 Sad</option>
+            <option value="Happy">🩷 Happy</option>
+            <option value="Worried">🔵 Worried</option>
+            <option value="Angry">🔴 Angry</option>
+            <option value="Lonely">🤍 Lonely</option>
+        </select>
+        <br><br>
+        <button onclick="getCardByMood()">Show Me Something</button>
+        <button onclick="getSurpriseCard()">✨ Surprise Me</button>
+
+        <div id="cardBox" style="text-align: left; margin-top: 20px; display: none;">
+            <p><strong>Quran:</strong> <span id="cardVerse"></span></p>
+            <p style="font-size: 12px; color: gray;"><span id="cardReference"></span></p>
+            <p><strong>Hadith:</strong> <span id="cardHadith"></span></p>
+            <p><strong>Dua:</strong> <span id="cardDua"></span></p>
+            <p><strong>Reflection:</strong> <span id="cardReflection"></span></p>
+            <button onclick="saveFavorite()">❤️ Save to Favorites</button>
+        </div>
+
+        <p id="message"></p>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+        let currentCardId = null;
+
+        if (!token) {
+            window.location.href = "login.html";
+        }
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            const user = await response.json();
+            return user.id;
+        }
+
+        function displayCard(card) {
+            currentCardId = card.id;
+            document.getElementById("cardVerse").textContent = card.quranVerse || "";
+            document.getElementById("cardReference").textContent = card.quranReference || "";
+            document.getElementById("cardHadith").textContent = card.hadith || "";
+            document.getElementById("cardDua").textContent = card.dua || "";
+            document.getElementById("cardReflection").textContent = card.reflection || "";
+            document.getElementById("cardBox").style.display = "block";
+            document.getElementById("message").textContent = "";
+        }
+
+        async function getCardByMood() {
+            const mood = document.getElementById("moodSelect").value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/readme/mood/${mood}`, { headers: authHeaders() });
+                if (!response.ok) throw new Error("No cards found for this mood yet.");
+                const card = await response.json();
+                displayCard(card);
+            } catch (error) {
+                document.getElementById("message").textContent = error.message;
+                document.getElementById("message").className = "error";
+                document.getElementById("cardBox").style.display = "none";
+            }
+        }
+
+        async function getSurpriseCard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/readme/surprise`, { headers: authHeaders() });
+                if (!response.ok) throw new Error("No cards available yet.");
+                const card = await response.json();
+                displayCard(card);
+            } catch (error) {
+                document.getElementById("message").textContent = error.message;
+                document.getElementById("message").className = "error";
+                document.getElementById("cardBox").style.display = "none";
+            }
+        }
+
+        async function saveFavorite() {
+            const message = document.getElementById("message");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/favorites`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        readMeCard: { id: currentCardId }
+                    })
+                });
+
+                if (!response.ok) throw new Error("Failed to save favorite.");
+
+                message.textContent = "Saved to favorites!";
+                message.className = "success";
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+    </script>
+
+</body>
+</html>

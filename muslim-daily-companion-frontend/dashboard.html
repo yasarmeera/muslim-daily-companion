@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Muslim Daily Companion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d1117;
+            --sidebar-bg: #131720;
+            --card-bg: #131720;
+            --card-bg-2: #1c212c;
+            --border: #1f242e;
+            --border-2: #262c38;
+            --text-main: #e6e6e6;
+            --text-heading: #ffffff;
+            --text-muted: #9ca3af;
+            --accent: #22c55e;
+            --hover-bg: #1c212c;
+        }
+
+        body[data-theme="light"] {
+            --bg: #f7f8fa;
+            --sidebar-bg: #ffffff;
+            --card-bg: #ffffff;
+            --card-bg-2: #f2f4f7;
+            --border: #e8e9ec;
+            --border-2: #dfe2e6;
+            --text-main: #1a1a1a;
+            --text-heading: #0f172a;
+            --text-muted: #5a6472;
+            --accent: #0f8a5f;
+            --hover-bg: #f2f4f7;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .sidebar {
+            width: 230px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar .logo {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 20px;
+            padding-left: 8px;
+        }
+        .sidebar .logo span { color: var(--accent); }
+
+        .theme-toggle {
+            display: flex;
+            background-color: var(--card-bg-2);
+            border-radius: 10px;
+            padding: 4px;
+            margin: 0 8px 24px 8px;
+        }
+        .theme-toggle button {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .theme-toggle button.active {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 12px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            transition: background-color 0.15s, color 0.15s;
+        }
+        .nav-item:hover {
+            background-color: var(--hover-bg);
+            color: var(--text-heading);
+        }
+        .nav-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin: 20px 0 8px 12px;
+        }
+        .sidebar-bottom { margin-top: auto; }
+        .logout-btn {
+            width: 100%;
+            background-color: var(--card-bg-2);
+            color: var(--text-main);
+            border: none;
+            padding: 11px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .logout-btn:hover { background-color: var(--hover-bg); }
+
+        .main { flex: 1; padding: 32px 40px; overflow-y: auto; }
+        .main h1 { font-size: 26px; font-weight: 800; color: var(--text-heading); }
+        .main .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 4px; margin-bottom: 28px; }
+        .section-title { font-size: 16px; font-weight: 700; color: var(--text-heading); margin-bottom: 14px; }
+
+        .stat-row { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 36px; }
+        .stat-card {
+            background-color: var(--card-bg-2);
+            border: 1px solid var(--border-2);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 150px;
+            flex-shrink: 0;
+        }
+        .stat-card .icon { font-size: 22px; margin-bottom: 10px; }
+        .stat-card .value { font-size: 24px; font-weight: 800; color: var(--text-heading); }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+        .feature-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px 16px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .feature-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+        .feature-card .icon {
+            font-size: 22px;
+            background-color: var(--card-bg-2);
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feature-card .title { font-size: 14px; font-weight: 600; color: var(--text-heading); }
+
+        @media (max-width: 700px) {
+            .sidebar { display: none; }
+            .main { padding: 24px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">🌙 <span>Muslim Daily</span></div>
+
+        <div class="theme-toggle">
+            <button id="darkBtn" onclick="setTheme('dark')">🌙 Dark</button>
+            <button id="lightBtn" onclick="setTheme('light')">☀️ Light</button>
+        </div>
+
+        <div class="nav-section-title">Overview</div>
+        <a href="dashboard.html" class="nav-item">🏠 Dashboard</a>
+
+        <div class="nav-section-title">Worship</div>
+        <a href="prayers.html" class="nav-item">🕌 Prayers</a>
+        <a href="quran.html" class="nav-item">📖 Quran</a>
+        <a href="dhikr.html" class="nav-item">🤲 Dhikr</a>
+        <a href="tahajjud.html" class="nav-item">🌙 Tahajjud</a>
+        <a href="sunnah.html" class="nav-item">☀️ Sunnah</a>
+
+        <div class="nav-section-title">More</div>
+        <a href="readme.html" class="nav-item">💛 Read Me</a>
+        <a href="journal.html" class="nav-item">📝 Journal</a>
+        <a href="library.html" class="nav-item">📚 Library</a>
+        <a href="favorites.html" class="nav-item">❤️ Favorites</a>
+        <a href="goals.html" class="nav-item">🎯 Goals</a>
+        <a href="reminders.html" class="nav-item">🔔 Reminders</a>
+        <a href="friends.html" class="nav-item">🤝 Friends</a>
+
+        <div class="sidebar-bottom">
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <h1>Welcome</h1>
+        <p class="subtitle" id="welcomeMessage">Loading...</p>
+
+        <div class="section-title">Today's Progress</div>
+        <div class="stat-row" id="statRow">
+            <div class="stat-card"><div class="icon">🕌</div><div class="value">–</div><div class="label">Loading...</div></div>
+        </div>
+
+        <div class="section-title">Explore</div>
+        <div class="feature-grid">
+            <a href="prayers.html" class="feature-card"><div class="icon">🕌</div><div class="title">Prayers</div></a>
+            <a href="quran.html" class="feature-card"><div class="icon">📖</div><div class="title">Quran</div></a>
+            <a href="dhikr.html" class="feature-card"><div class="icon">🤲</div><div class="title">Dhikr</div></a>
+            <a href="tahajjud.html" class="feature-card"><div class="icon">🌙</div><div class="title">Tahajjud</div></a>
+            <a href="sunnah.html" class="feature-card"><div class="icon">☀️</div><div class="title">Sunnah</div></a>
+            <a href="readme.html" class="feature-card"><div class="icon">💛</div><div class="title">Read Me</div></a>
+            <a href="journal.html" class="feature-card"><div class="icon">📝</div><div class="title">Journal</div></a>
+            <a href="library.html" class="feature-card"><div class="icon">📚</div><div class="title">Library</div></a>
+            <a href="favorites.html" class="feature-card"><div class="icon">❤️</div><div class="title">Favorites</div></a>
+            <a href="goals.html" class="feature-card"><div class="icon">🎯</div><div class="title">Goals</div></a>
+            <a href="reminders.html" class="feature-card"><div class="icon">🔔</div><div class="title">Reminders</div></a>
+            <a href="friends.html" class="feature-card"><div class="icon">🤝</div><div class="title">Friends</div></a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) {
+            window.location.href = "login.html";
+        } else {
+            document.getElementById("welcomeMessage").textContent = "Logged in as " + email;
+            loadDashboard();
+        }
+
+        function setTheme(theme) {
+            document.body.setAttribute("data-theme", theme);
+            localStorage.setItem("theme", theme);
+            document.getElementById("darkBtn").classList.toggle("active", theme === "dark");
+            document.getElementById("lightBtn").classList.toggle("active", theme === "light");
+        }
+
+        const savedTheme = localStorage.getItem("theme") || "dark";
+        setTheme(savedTheme);
+
+        async function loadDashboard() {
+            try {
+                const userResponse = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+                const user = await userResponse.json();
+
+                const progressResponse = await fetch(`${API_BASE_URL}/progress/today/${user.id}`, { headers: authHeaders() });
+                const progress = await progressResponse.json();
+
+                document.getElementById("statRow").innerHTML = `
+                    <div class="stat-card"><div class="icon">🕌</div><div class="value">${progress.prayersCompleted}</div><div class="label">Prayers completed</div></div>
+                    <div class="stat-card"><div class="icon">📖</div><div class="value">${progress.quranPagesToday}</div><div class="label">Quran pages today</div></div>
+                    <div class="stat-card"><div class="icon">🤲</div><div class="value">${progress.dhikrCountToday}</div><div class="label">Dhikr count today</div></div>
+                    <div class="stat-card"><div class="icon">☀️</div><div class="value">${progress.sunnahCompletedToday}</div><div class="label">Sunnah completed</div></div>
+                    <div class="stat-card"><div class="icon">🌙</div><div class="value">${progress.tahajjudDoneToday ? "Yes" : "No"}</div><div class="label">Tahajjud done</div></div>
+                `;
+            } catch (error) {
+                document.getElementById("statRow").innerHTML = "<p style='color:var(--text-muted)'>Could not load progress.</p>";
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("email");
+            window.location.href = "login.html";
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tahajjud - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 400px;">
+        <h1>🌙 Tahajjud Tracker</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <button onclick="logTahajjud()">Mark Tahajjud as Completed Today</button>
+        <p id="message"></p>
+
+        <h3>Today's Status</h3>
+        <div id="tahajjudStatus">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadTahajjud();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function logTahajjud() {
+            const message = document.getElementById("message");
+            const today = new Date().toISOString().split("T")[0];
+
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/tahajjud`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        user: { id: userId },
+                        tahajjudDate: today,
+                        completed: true
+                    })
+                });
+                if (!response.ok) throw new Error("Failed to log tahajjud.");
+                message.textContent = "Tahajjud logged!";
+                message.className = "success";
+                loadTahajjud();
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "error";
+            }
+        }
+
+        async function loadTahajjud() {
+            const statusDiv = document.getElementById("tahajjudStatus");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/tahajjud/user/${userId}`, { headers: authHeaders() });
+                const items = await response.json();
+                const today = new Date().toISOString().split("T")[0];
+                const done = items.some(t => t.tahajjudDate === today && t.completed);
+
+                statusDiv.innerHTML = done
+                    ? "<p>✅ Tahajjud completed today!</p>"
+                    : "<p>Not completed yet today.</p>";
+            } catch (error) {
+                statusDiv.textContent = "Could not load status.";
+            }
+        }
+    </script>
+
+</body>
+</html>

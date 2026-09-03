@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Favorites - Muslim Daily Companion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" style="width: 450px;">
+        <h1>❤️ Favorites</h1>
+        <p><a href="dashboard.html">← Back to Dashboard</a></p>
+
+        <div id="favoritesList" style="text-align: left;">Loading...</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const token = localStorage.getItem("token");
+        const email = localStorage.getItem("email");
+
+        if (!token) window.location.href = "login.html";
+        else loadFavorites();
+
+        async function getUserId() {
+            const response = await fetch(`${API_BASE_URL}/users/by-email/${email}`, { headers: authHeaders() });
+            return (await response.json()).id;
+        }
+
+        async function loadFavorites() {
+            const listDiv = document.getElementById("favoritesList");
+            try {
+                const userId = await getUserId();
+                const response = await fetch(`${API_BASE_URL}/favorites/user/${userId}`, { headers: authHeaders() });
+                const favorites = await response.json();
+
+                if (favorites.length === 0) {
+                    listDiv.innerHTML = "<p>No favorites saved yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = favorites.slice().reverse().map(f => {
+                    const card = f.readMeCard;
+                    return `
+                        <div style="border-bottom: 1px solid #eee; padding: 12px 0;">
+                            <p><strong>Mood:</strong> ${card.mood}</p>
+                            ${card.quranVerse ? `<p><strong>Quran:</strong> ${card.quranVerse}</p>` : ""}
+                            ${card.quranReference ? `<p style="font-size: 12px; color: gray;">${card.quranReference}</p>` : ""}
+                            ${card.hadith ? `<p><strong>Hadith:</strong> ${card.hadith}</p>` : ""}
+                            ${card.dua ? `<p><strong>Dua:</strong> ${card.dua}</p>` : ""}
+                            ${card.reflection ? `<p><strong>Reflection:</strong> ${card.reflection}</p>` : ""}
+                            <button onclick="removeFavorite(${f.id})" style="font-size: 12px; padding: 4px 10px;">Remove</button>
+                        </div>
+                    `;
+                }).join("");
+            } catch (error) {
+                listDiv.textContent = "Could not load favorites.";
+            }
+        }
+
+        async function removeFavorite(favoriteId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/favorites/${favoriteId}`, {
+                    method: "DELETE",
+                    headers: authHeaders()
+                });
+                if (!response.ok) throw new Error("Failed to remove.");
+                loadFavorites();
+            } catch (error) {
+                alert("Could not remove favorite.");
+            }
+        }
+    </script>
+
+</body>
+</html>
